@@ -1,0 +1,632 @@
+{
+  "name": "Marketing Team - Research",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "chat-trigger",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 460],
+      "webhookId": "research-team-chat"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "research-team",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 260],
+      "webhookId": "research-team-webhook"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll"
+      },
+      "id": "merge-triggers",
+      "name": "Merge Triggers",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [460, 360]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "campaign_id",
+              "name": "campaign_id",
+              "value": "={{ $json.body?.campaign_id ?? $json.campaign_id ?? Math.floor(Date.now() / 1000) }}",
+              "type": "number"
+            },
+            {
+              "id": "user_input",
+              "name": "user_input",
+              "value": "={{ $json.body?.user_input ?? $json.chatInput ?? $json.user_input }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-data",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [680, 360]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_input }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a comprehensive brand strategist. Analyze the following brand/topic.\n\nYour responsibilities include:\n\n1. MARKET AND CONSUMER RESEARCH\n   - Gather and analyze data on consumer behavior, market trends, and competitors\n   - Uncover opportunities and challenges in the market\n   - Use qualitative and quantitative research methods for insights into audience needs and industry trends\n   - Identify emerging patterns and shifts in consumer preferences\n\n2. BRAND POSITIONING AND STRATEGY\n   - Define the brand's unique value proposition and market positioning to stand out from competitors\n   - Build brand architecture, including:\n     * Messaging frameworks\n     * Creative guidelines\n     * Logo design concepts and visual identity\n     * Tone of voice specifications\n   - Create a positioning statement that clearly differentiates the brand\n\n3. BRAND MESSAGING AND STORYTELLING\n   - Develop compelling messaging that communicates the brand's mission, values, and benefits across all channels\n   - Shape narratives that resonate with target audiences and build brand loyalty\n   - Create a story framework that can be adapted for different platforms and audiences\n\nUse web search extensively to research:\n- Competitor positioning and messaging\n- Market trends and consumer insights\n- Industry benchmarks and best practices\n- Target demographic behaviors and preferences\n\nProvide a comprehensive brand strategy document with actionable recommendations."
+        }
+      },
+      "id": "agent-brand-strategy",
+      "name": "Brand Strategist",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [900, 160]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.0-flash-exp",
+        "options": {
+          "temperature": 0.8
+        }
+      },
+      "id": "gemini-brand-strategy",
+      "name": "Gemini - Brand Strategist",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [900, 300],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "search-brand-strategy",
+      "name": "Google Search - Brand",
+      "type": "@n8n/n8n-nodes-langchain.toolGoogleSearch",
+      "typeVersion": 1,
+      "position": [900, 440],
+      "credentials": {
+        "googleCustomSearchApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Search API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_input }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an SEO keyword research specialist.\n\nYour job is to:\n1. Generate 5-10 high-value keywords related to the brand/topic\n2. Identify search intent for each keyword (informational, transactional, navigational)\n3. Suggest long-tail keyword variations\n4. Rate keywords by potential traffic and competition (High/Medium/Low)\n5. Identify question-based keywords for featured snippets\n\nUse web search to verify keyword relevance and find trending terms.\n\nFormat output as a structured list with:\n- Primary keywords (5-10)\n- Long-tail variations (3-5 per primary)\n- Question keywords (5-10)\n- Search intent classification\n- Competition rating"
+        }
+      },
+      "id": "agent-seo-researcher",
+      "name": "SEO Researcher",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [900, 560]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.0-flash-exp",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "gemini-seo-researcher",
+      "name": "Gemini - SEO Researcher",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [900, 700],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "search-seo-researcher",
+      "name": "Google Search - SEO",
+      "type": "@n8n/n8n-nodes-langchain.toolGoogleSearch",
+      "typeVersion": 1,
+      "position": [900, 840],
+      "credentials": {
+        "googleCustomSearchApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Search API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_input }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a competitive intelligence analyst.\n\nYour job is to:\n1. Identify 3-5 main competitors in the space\n2. Analyze their content strategies and messaging\n3. Evaluate their SEO presence and keyword targeting\n4. Find gaps and opportunities they're missing\n5. Suggest differentiation strategies\n\nUse web search to research competitors thoroughly.\n\nProvide:\n- Competitor profiles (name, positioning, strengths, weaknesses)\n- Content strategy analysis\n- Gap analysis\n- Differentiation recommendations\n- Quick wins to exploit"
+        }
+      },
+      "id": "agent-competitor",
+      "name": "Competitive Analyst",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [900, 960]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.0-flash-exp",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "gemini-competitor",
+      "name": "Gemini - Competitor",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [900, 1100],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "search-competitor",
+      "name": "Google Search - Competitor",
+      "type": "@n8n/n8n-nodes-langchain.toolGoogleSearch",
+      "typeVersion": 1,
+      "position": [900, 1240],
+      "credentials": {
+        "googleCustomSearchApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Search API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll"
+      },
+      "id": "merge-agents",
+      "name": "Merge Research",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1180, 560]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "brand_strategy",
+              "name": "brand_strategy",
+              "value": "={{ $('Brand Strategist').item.json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "keywords",
+              "name": "keywords",
+              "value": "={{ $('SEO Researcher').item.json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "competitor_analysis",
+              "name": "competitor_analysis",
+              "value": "={{ $('Competitive Analyst').item.json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "structure-output",
+      "name": "Structure Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1400, 560]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1kv0ZJZOY-n8CX6Az3N8fkPXmpSZbl3i84f7MFMz3X7E",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Phase 1 - Research",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "campaign_id": "={{ $('Prepare Data').item.json.campaign_id }}",
+            "timestamp": "={{ $('Prepare Data').item.json.timestamp }}",
+            "brand_strategy": "={{ $json.brand_strategy }}",
+            "keywords": "={{ $json.keywords }}",
+            "competitor_analysis": "={{ $json.competitor_analysis }}",
+            "research_notes": ""
+          }
+        },
+        "options": {}
+      },
+      "id": "sheets-write",
+      "name": "Write to Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1620, 560],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "error-check",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-success",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1840, 560]
+    },
+    {
+      "parameters": {
+        "channel": "marketing-campaigns",
+        "text": "=:x: Research Team Failed\n\nCampaign ID: {{ $('Prepare Data').item.json.campaign_id }}\nError: {{ $json.error?.message ?? 'Unknown error' }}\nTimestamp: {{ $now.toISO() }}",
+        "otherOptions": {}
+      },
+      "id": "slack-error",
+      "name": "Slack Error",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [2060, 680],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Slack OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "response",
+              "name": "response",
+              "value": "=# Research Complete - Campaign #{{ $('Prepare Data').item.json.campaign_id }}\n\n## Brand Strategy\n{{ $('Structure Output').item.json.brand_strategy }}\n\n---\n\n## Keywords\n{{ $('Structure Output').item.json.keywords }}\n\n---\n\n## Competitor Analysis\n{{ $('Structure Output').item.json.competitor_analysis }}\n\n---\n\n*Data saved to Google Sheets*",
+              "type": "string"
+            },
+            {
+              "id": "campaign_id",
+              "name": "campaign_id",
+              "value": "={{ $('Prepare Data').item.json.campaign_id }}",
+              "type": "number"
+            },
+            {
+              "id": "brand_strategy",
+              "name": "brand_strategy",
+              "value": "={{ $('Structure Output').item.json.brand_strategy }}",
+              "type": "string"
+            },
+            {
+              "id": "keywords",
+              "name": "keywords",
+              "value": "={{ $('Structure Output').item.json.keywords }}",
+              "type": "string"
+            },
+            {
+              "id": "competitor_analysis",
+              "name": "competitor_analysis",
+              "value": "={{ $('Structure Output').item.json.competitor_analysis }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2060, 440]
+    },
+    {
+      "parameters": {
+        "content": "## RESEARCH TEAM\n\n3 Agents Running in Parallel:\n- Brand Strategist\n- SEO Researcher  \n- Competitive Analyst",
+        "height": 1180,
+        "width": 520,
+        "color": 4
+      },
+      "id": "sticky-agents",
+      "name": "Agents Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [820, 80]
+    },
+    {
+      "parameters": {
+        "content": "## TRIGGERS\n\nChat Trigger: Interactive use\nWebhook: API access\n\nBoth feed into same workflow",
+        "height": 340,
+        "width": 320,
+        "color": 6
+      },
+      "id": "sticky-triggers",
+      "name": "Triggers Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [160, 180]
+    }
+  ],
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Merge Triggers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Merge Triggers",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Triggers": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Brand Strategist",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SEO Researcher",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Competitive Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brand Strategist": {
+      "main": [
+        [
+          {
+            "node": "Merge Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Brand Strategist": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Brand Strategist",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Search - Brand": {
+      "ai_tool": [
+        [
+          {
+            "node": "Brand Strategist",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO Researcher": {
+      "main": [
+        [
+          {
+            "node": "Merge Research",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Gemini - SEO Researcher": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SEO Researcher",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Search - SEO": {
+      "ai_tool": [
+        [
+          {
+            "node": "SEO Researcher",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Competitive Analyst": {
+      "main": [
+        [
+          {
+            "node": "Merge Research",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Gemini - Competitor": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Competitive Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Search - Competitor": {
+      "ai_tool": [
+        [
+          {
+            "node": "Competitive Analyst",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Research": {
+      "main": [
+        [
+          {
+            "node": "Structure Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structure Output": {
+      "main": [
+        [
+          {
+            "node": "Write to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 2,
+  "versionId": "research-team-v1"
+}

@@ -1,0 +1,705 @@
+{
+  "name": "Marketing Team - Content",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "chat-trigger",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 460],
+      "webhookId": "content-team-chat"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "content-team",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 260],
+      "webhookId": "content-team-webhook"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll"
+      },
+      "id": "merge-triggers",
+      "name": "Merge Triggers",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [460, 360]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "campaign_id",
+              "name": "campaign_id",
+              "value": "={{ $json.body?.campaign_id ?? $json.campaign_id ?? Math.floor(Date.now() / 1000) }}",
+              "type": "number"
+            },
+            {
+              "id": "user_input",
+              "name": "user_input",
+              "value": "={{ $json.body?.user_input ?? $json.chatInput ?? $json.user_input }}",
+              "type": "string"
+            },
+            {
+              "id": "brand_strategy",
+              "name": "brand_strategy",
+              "value": "={{ $json.body?.brand_strategy ?? $json.brand_strategy ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "keywords",
+              "name": "keywords",
+              "value": "={{ $json.body?.keywords ?? $json.keywords ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "competitor_analysis",
+              "name": "competitor_analysis",
+              "value": "={{ $json.body?.competitor_analysis ?? $json.competitor_analysis ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-data",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [680, 360]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-research",
+              "leftValue": "={{ $json.brand_strategy }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-research",
+      "name": "Has Research Data?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 360]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1kv0ZJZOY-n8CX6Az3N8fkPXmpSZbl3i84f7MFMz3X7E",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Phase 1 - Research",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "campaign_id",
+              "lookupValue": "={{ $('Prepare Data').item.json.campaign_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-research",
+      "name": "Fetch Research from Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1120, 480],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "brand_strategy",
+              "name": "brand_strategy",
+              "value": "={{ $json.brand_strategy }}",
+              "type": "string"
+            },
+            {
+              "id": "keywords",
+              "name": "keywords",
+              "value": "={{ $json.keywords }}",
+              "type": "string"
+            },
+            {
+              "id": "competitor_analysis",
+              "name": "competitor_analysis",
+              "value": "={{ $json.competitor_analysis }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "merge-research-data",
+      "name": "Merge Research Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1340, 480]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Brand Strategy: {{ $('Prepare Data').item.json.brand_strategy || $json.brand_strategy }}\n\nKeywords: {{ $('Prepare Data').item.json.keywords || $json.keywords }}\n\nCompetitor Analysis: {{ $('Prepare Data').item.json.competitor_analysis || $json.competitor_analysis }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a content strategist and blog planner.\n\nUsing the research provided, create a detailed blog post outline with:\n\n1. SEO-OPTIMIZED TITLE\n   - Include primary keyword\n   - Under 60 characters\n   - Compelling and click-worthy\n\n2. INTRODUCTION HOOK\n   - Opening statement that grabs attention\n   - Problem or question being addressed\n   - Promise of value\n\n3. MAIN SECTIONS (3-5)\n   - H2 headers with keywords\n   - 2-4 subsections each (H3)\n   - Key points to cover\n   - Data/examples to include\n\n4. CONCLUSION\n   - Summary of key takeaways\n   - Clear call-to-action\n\nEnsure the outline:\n- Aligns with brand strategy\n- Targets identified keywords naturally\n- Follows logical flow\n- Provides clear direction for writer"
+        }
+      },
+      "id": "agent-planner",
+      "name": "Content Planner",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [1560, 360]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.0-flash-exp",
+        "options": {
+          "temperature": 0.8
+        }
+      },
+      "id": "gemini-planner",
+      "name": "Gemini - Planner",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [1560, 500],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Content Planner').item.json.output }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert blog writer. Write a complete 1000-1500 word blog post.\n\nRequirements:\n\n1. Follow the outline structure precisely\n2. Use engaging, conversational tone matching brand voice\n3. Incorporate keywords naturally (no stuffing)\n4. Include specific examples and data WITH CITATIONS\n5. Write clear transitions between sections\n6. Maintain reader engagement throughout\n\nCITATION REQUIREMENTS (Critical):\n- Use web search to find relevant examples, statistics, or recent developments\n- Every factual claim MUST include a citation\n- Format: [Source Name, Year] or inline links\n- Include \"Sources\" section at end\n- Minimum 5-8 credible sources\n\nExamples of proper citations:\n- \"According to a 2024 HubSpot study, 73% of marketers...\" [HubSpot, 2024]\n- Research from McKinsey shows that... [McKinsey, 2023]\n\nFormat:\n- Markdown with H2, H3 headers\n- Short paragraphs (2-4 sentences)\n- Bullet points where appropriate\n- Target: 1000-1500 words"
+        }
+      },
+      "id": "agent-writer",
+      "name": "Content Writer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [1800, 360]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.0-flash-exp",
+        "options": {
+          "temperature": 0.8
+        }
+      },
+      "id": "gemini-writer",
+      "name": "Gemini - Writer",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [1800, 500],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "search-writer",
+      "name": "Google Search - Writer",
+      "type": "@n8n/n8n-nodes-langchain.toolGoogleSearch",
+      "typeVersion": 1,
+      "position": [1800, 640],
+      "credentials": {
+        "googleCustomSearchApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Search API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Content Writer').item.json.output }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a professional editor. Review and polish the blog post.\n\nEdit for:\n\n1. GRAMMAR AND MECHANICS\n   - Spelling errors\n   - Punctuation\n   - Sentence structure\n\n2. FLOW AND READABILITY\n   - Smooth transitions\n   - Logical progression\n   - Paragraph breaks\n   - Flesch-Kincaid score optimization\n\n3. BRAND VOICE CONSISTENCY\n   - Tone alignment\n   - Terminology consistency\n   - Style guide adherence\n\n4. SEO OPTIMIZATION\n   - Keyword placement\n   - Header optimization\n   - Meta-friendly opening\n\n5. CLARITY AND IMPACT\n   - Remove filler words\n   - Strengthen weak phrases\n   - Enhance calls-to-action\n\nProvide the final polished version in markdown format.\nDo not add commentary - just output the edited post."
+        }
+      },
+      "id": "agent-editor",
+      "name": "Content Editor",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [2040, 360]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.0-flash-exp",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "gemini-editor",
+      "name": "Gemini - Editor",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [2040, 500],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "blog_outline",
+              "name": "blog_outline",
+              "value": "={{ $('Content Planner').item.json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "blog_draft",
+              "name": "blog_draft",
+              "value": "={{ $('Content Writer').item.json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "final_blog",
+              "name": "final_blog",
+              "value": "={{ $('Content Editor').item.json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "structure-output",
+      "name": "Structure Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2260, 360]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1kv0ZJZOY-n8CX6Az3N8fkPXmpSZbl3i84f7MFMz3X7E",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Phase 2 - Content",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "campaign_id": "={{ $('Prepare Data').item.json.campaign_id }}",
+            "timestamp": "={{ $('Prepare Data').item.json.timestamp }}",
+            "blog_outline": "={{ $json.blog_outline }}",
+            "blog_draft": "={{ $json.blog_draft }}",
+            "final_blog": "={{ $json.final_blog }}",
+            "word_count": "={{ $json.final_blog.split(' ').length }}",
+            "content_notes": ""
+          }
+        },
+        "options": {}
+      },
+      "id": "sheets-write",
+      "name": "Write to Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2480, 360],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "error-check",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-success",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2700, 360]
+    },
+    {
+      "parameters": {
+        "channel": "marketing-campaigns",
+        "text": "=:x: Content Team Failed\n\nCampaign ID: {{ $('Prepare Data').item.json.campaign_id }}\nError: {{ $json.error?.message ?? 'Unknown error' }}\nTimestamp: {{ $now.toISO() }}",
+        "otherOptions": {}
+      },
+      "id": "slack-error",
+      "name": "Slack Error",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [2920, 480],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Slack OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "response",
+              "name": "response",
+              "value": "=# Content Complete - Campaign #{{ $('Prepare Data').item.json.campaign_id }}\n\n{{ $('Structure Output').item.json.final_blog }}\n\n---\n\n**Word Count:** {{ $('Structure Output').item.json.final_blog.split(' ').length }}\n\n*Data saved to Google Sheets*",
+              "type": "string"
+            },
+            {
+              "id": "campaign_id",
+              "name": "campaign_id",
+              "value": "={{ $('Prepare Data').item.json.campaign_id }}",
+              "type": "number"
+            },
+            {
+              "id": "blog_outline",
+              "name": "blog_outline",
+              "value": "={{ $('Structure Output').item.json.blog_outline }}",
+              "type": "string"
+            },
+            {
+              "id": "blog_draft",
+              "name": "blog_draft",
+              "value": "={{ $('Structure Output').item.json.blog_draft }}",
+              "type": "string"
+            },
+            {
+              "id": "final_blog",
+              "name": "final_blog",
+              "value": "={{ $('Structure Output').item.json.final_blog }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2920, 240]
+    },
+    {
+      "parameters": {
+        "content": "## CONTENT TEAM\n\n3 Agents Running Sequentially:\n1. Content Planner\n2. Content Writer\n3. Content Editor",
+        "height": 420,
+        "width": 740,
+        "color": 5
+      },
+      "id": "sticky-agents",
+      "name": "Agents Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1480, 260]
+    },
+    {
+      "parameters": {
+        "content": "## DATA FETCH\n\nIf no research data provided,\nfetch from Sheets by campaign_id",
+        "height": 280,
+        "width": 280,
+        "color": 3
+      },
+      "id": "sticky-fetch",
+      "name": "Fetch Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1040, 380]
+    }
+  ],
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Merge Triggers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Merge Triggers",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Triggers": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Has Research Data?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Research Data?": {
+      "main": [
+        [
+          {
+            "node": "Content Planner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Research from Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Research from Sheets": {
+      "main": [
+        [
+          {
+            "node": "Merge Research Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Research Data": {
+      "main": [
+        [
+          {
+            "node": "Content Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content Planner": {
+      "main": [
+        [
+          {
+            "node": "Content Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Planner": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Content Planner",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content Writer": {
+      "main": [
+        [
+          {
+            "node": "Content Editor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Writer": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Content Writer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Search - Writer": {
+      "ai_tool": [
+        [
+          {
+            "node": "Content Writer",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content Editor": {
+      "main": [
+        [
+          {
+            "node": "Structure Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Editor": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Content Editor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structure Output": {
+      "main": [
+        [
+          {
+            "node": "Write to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 2,
+  "versionId": "content-team-v1"
+}

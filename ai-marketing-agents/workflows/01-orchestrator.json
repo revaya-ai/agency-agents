@@ -1,0 +1,649 @@
+{
+  "name": "Marketing Team - Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "chat-trigger",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 400],
+      "webhookId": "orchestrator-chat"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Marketing Team Coordinator. Parse the user's request and determine which action to take.\n\nAvailable commands:\n1. NEW CAMPAIGN - Run all 3 phases (Research -> Content -> Distribution)\n2. RESEARCH - Run only the Research Team\n3. CONTENT - Run only the Content Team\n4. DISTRIBUTE - Run only the Distribution Team\n5. STATUS - Check campaign status\n6. HELP - Show available commands\n\nParse the user input and return JSON:\n{\n  \"action\": \"new_campaign\" | \"research\" | \"content\" | \"distribute\" | \"status\" | \"help\",\n  \"campaign_id\": number | null,\n  \"user_input\": \"the brand/topic description or content to process\"\n}\n\nExamples:\n- \"New campaign: sustainable coffee brand\" -> {\"action\": \"new_campaign\", \"campaign_id\": null, \"user_input\": \"sustainable coffee brand\"}\n- \"Research: meal kit delivery competitors\" -> {\"action\": \"research\", \"campaign_id\": null, \"user_input\": \"meal kit delivery competitors\"}\n- \"Content for campaign #5\" -> {\"action\": \"content\", \"campaign_id\": 5, \"user_input\": \"\"}\n- \"Distribute campaign 3\" -> {\"action\": \"distribute\", \"campaign_id\": 3, \"user_input\": \"\"}\n- \"Status of campaign 7\" -> {\"action\": \"status\", \"campaign_id\": 7, \"user_input\": \"\"}\n- \"Help\" -> {\"action\": \"help\", \"campaign_id\": null, \"user_input\": \"\"}\n\nAlways return valid JSON only."
+        }
+      },
+      "id": "router",
+      "name": "Router",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.0-flash-exp",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "gemini-router",
+      "name": "Gemini - Router",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [460, 540],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the router output\nconst output = $input.first().json.output;\nlet parsed;\n\ntry {\n  // Try to parse as JSON\n  const cleaned = output.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  // Default to help if parsing fails\n  parsed = { action: 'help', campaign_id: null, user_input: '' };\n}\n\nreturn [{\n  json: {\n    action: parsed.action || 'help',\n    campaign_id: parsed.campaign_id || Math.floor(Date.now() / 1000),\n    user_input: parsed.user_input || '',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse-router",
+      "name": "Parse Router Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "new_campaign",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "New Campaign"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "research",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Research"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "content",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Content"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "distribute",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Distribute"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Status"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "help",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Help"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "switch-action",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [920, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "RESEARCH_WORKFLOW_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "execute-research",
+      "name": "Execute Research Team",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1200, 200]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CONTENT_WORKFLOW_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "execute-content",
+      "name": "Execute Content Team",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1200, 360]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "DISTRIBUTION_WORKFLOW_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "execute-distribution",
+      "name": "Execute Distribution Team",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1200, 520]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1kv0ZJZOY-n8CX6Az3N8fkPXmpSZbl3i84f7MFMz3X7E",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Campaign Overview",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "campaign_id",
+              "lookupValue": "={{ $json.campaign_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-status",
+      "name": "Get Campaign Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1200, 680],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "response",
+              "name": "response",
+              "value": "=# Campaign #{{ $json.campaign_id }} Status\n\n**Status:** {{ $json.status || 'Not found' }}\n**Created:** {{ $json.timestamp || 'Unknown' }}\n**Last Updated:** {{ $json.last_updated || 'Unknown' }}\n**Input:** {{ $json.user_input || 'N/A' }}\n**Blog URL:** {{ $json.blog_url || 'Not published' }}\n**Notes:** {{ $json.notes || 'None' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-status",
+      "name": "Format Status",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1420, 680]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "response",
+              "name": "response",
+              "value": "# Marketing Team Commands\n\n## Available Actions\n\n### 1. New Campaign\nRun all 3 phases: Research -> Content -> Distribution\n```\nNew campaign: [brand/topic description]\n```\nExample: `New campaign: sustainable coffee brand targeting eco-conscious millennials`\n\n### 2. Research Only\nRun brand strategy, keyword research, and competitor analysis\n```\nResearch: [brand/topic description]\n```\nExample: `Research: meal kit delivery market competitors`\n\n### 3. Content Only\nCreate blog outline, write and edit content\n```\nContent for campaign #[ID]\n```\nOr provide research directly:\n```\nContent: [paste research or topic]\n```\n\n### 4. Distribution Only\nGenerate social media posts, SEO metadata, and visual guidelines\n```\nDistribute campaign #[ID]\n```\nOr provide content directly:\n```\nDistribute: [paste blog content]\n```\n\n### 5. Check Status\n```\nStatus of campaign #[ID]\n```\n\n### 6. Help\n```\nHelp\n```\n\n---\n\n## Team Roster\n\n| Team | Agents |\n|------|--------|\n| Research | Brand Strategist, SEO Researcher, Competitive Analyst |\n| Content | Content Planner, Content Writer, Content Editor |\n| Distribution | Social Media Manager, SEO & AEO Specialist, Creative Director |",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "help-response",
+      "name": "Help Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1200, 840]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "RESEARCH_WORKFLOW_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "campaign-research",
+      "name": "1. Research Phase",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1200, 40]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CONTENT_WORKFLOW_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "campaign-content",
+      "name": "2. Content Phase",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1440, 40]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "DISTRIBUTION_WORKFLOW_ID",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "campaign-distribution",
+      "name": "3. Distribution Phase",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1680, 40]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1kv0ZJZOY-n8CX6Az3N8fkPXmpSZbl3i84f7MFMz3X7E",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Campaign Overview",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "campaign_id": "={{ $('Parse Router Output').item.json.campaign_id }}",
+            "timestamp": "={{ $('Parse Router Output').item.json.timestamp }}",
+            "user_input": "={{ $('Parse Router Output').item.json.user_input }}",
+            "status": "Complete",
+            "blog_url": "",
+            "last_updated": "={{ $now.toISO() }}",
+            "notes": ""
+          }
+        },
+        "options": {}
+      },
+      "id": "save-campaign",
+      "name": "Save Campaign Overview",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1920, 40],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "response",
+              "name": "response",
+              "value": "=# Campaign #{{ $('Parse Router Output').item.json.campaign_id }} Complete!\n\nAll 3 phases finished successfully:\n\n:white_check_mark: **Research** - Brand strategy, keywords, competitor analysis\n:white_check_mark: **Content** - Blog outline, draft, and final edited post\n:white_check_mark: **Distribution** - Social media posts, SEO metadata, visual guidelines\n\nAll data saved to Google Sheets.\n\nUse `Status of campaign #{{ $('Parse Router Output').item.json.campaign_id }}` to check details.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "campaign-complete",
+      "name": "Campaign Complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2140, 40]
+    },
+    {
+      "parameters": {
+        "channel": "marketing-campaigns",
+        "text": "=:white_check_mark: Campaign #{{ $('Parse Router Output').item.json.campaign_id }} Complete!\n\nInput: {{ $('Parse Router Output').item.json.user_input }}\nTimestamp: {{ $now.toISO() }}",
+        "otherOptions": {}
+      },
+      "id": "slack-success",
+      "name": "Slack Success",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [2140, 180],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Slack OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## ORCHESTRATOR\n\nMain entry point for Marketing Team.\nRoutes requests to appropriate workflows.",
+        "height": 180,
+        "width": 560,
+        "color": 7
+      },
+      "id": "sticky-header",
+      "name": "Header Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [160, 200]
+    },
+    {
+      "parameters": {
+        "content": "## FULL CAMPAIGN FLOW\n\nResearch -> Content -> Distribution\n(Sequential execution)",
+        "height": 280,
+        "width": 1100,
+        "color": 4
+      },
+      "id": "sticky-campaign",
+      "name": "Campaign Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1120, -60]
+    },
+    {
+      "parameters": {
+        "content": "## IMPORTANT: Update Workflow IDs\n\nAfter importing the sub-workflows,\nupdate the Execute Workflow nodes\nwith the correct workflow IDs:\n\n- RESEARCH_WORKFLOW_ID\n- CONTENT_WORKFLOW_ID\n- DISTRIBUTION_WORKFLOW_ID",
+        "height": 240,
+        "width": 340,
+        "color": 2
+      },
+      "id": "sticky-warning",
+      "name": "Warning Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1540, 300]
+    }
+  ],
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Router": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Router",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router": {
+      "main": [
+        [
+          {
+            "node": "Parse Router Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Router Output": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "1. Research Phase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute Research Team",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute Content Team",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute Distribution Team",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Campaign Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Help Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Research Phase": {
+      "main": [
+        [
+          {
+            "node": "2. Content Phase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Content Phase": {
+      "main": [
+        [
+          {
+            "node": "3. Distribution Phase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Distribution Phase": {
+      "main": [
+        [
+          {
+            "node": "Save Campaign Overview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Campaign Overview": {
+      "main": [
+        [
+          {
+            "node": "Campaign Complete",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Campaign Status": {
+      "main": [
+        [
+          {
+            "node": "Format Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "versionId": "orchestrator-v1"
+}

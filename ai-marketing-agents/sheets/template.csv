@@ -1,0 +1,14 @@
+# Google Sheets Template
+# Create a spreadsheet with 4 tabs using the column headers below
+
+## Tab 1: Campaign Overview
+campaign_id,timestamp,user_input,status,blog_url,last_updated,notes
+
+## Tab 2: Phase 1 - Research
+campaign_id,timestamp,brand_strategy,keywords,competitor_analysis,research_notes
+
+## Tab 3: Phase 2 - Content
+campaign_id,timestamp,blog_outline,blog_draft,final_blog,word_count,content_notes
+
+## Tab 4: Phase 3 - Distribution
+campaign_id,timestamp,tiktok_script,linkedin_post,instagram_caption,reddit_post,meta_title,meta_description,image_alt_texts,internal_links,schema_markup,featured_image_concept,color_palette,typography,visual_style,logo_concept,distribution_notes

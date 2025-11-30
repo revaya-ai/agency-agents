@@ -1,0 +1,799 @@
+{
+  "name": "Marketing Team - Distribution",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "chat-trigger",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 460],
+      "webhookId": "distribution-team-chat"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "distribution-team",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 260],
+      "webhookId": "distribution-team-webhook"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll"
+      },
+      "id": "merge-triggers",
+      "name": "Merge Triggers",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [460, 360]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "campaign_id",
+              "name": "campaign_id",
+              "value": "={{ $json.body?.campaign_id ?? $json.campaign_id ?? Math.floor(Date.now() / 1000) }}",
+              "type": "number"
+            },
+            {
+              "id": "final_blog",
+              "name": "final_blog",
+              "value": "={{ $json.body?.final_blog ?? $json.chatInput ?? $json.final_blog ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "brand_strategy",
+              "name": "brand_strategy",
+              "value": "={{ $json.body?.brand_strategy ?? $json.brand_strategy ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "keywords",
+              "name": "keywords",
+              "value": "={{ $json.body?.keywords ?? $json.keywords ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-data",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [680, 360]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-blog",
+              "leftValue": "={{ $json.final_blog }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-blog",
+      "name": "Has Blog Content?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 360]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1kv0ZJZOY-n8CX6Az3N8fkPXmpSZbl3i84f7MFMz3X7E",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Phase 2 - Content",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "campaign_id",
+              "lookupValue": "={{ $('Prepare Data').item.json.campaign_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-content",
+      "name": "Fetch Content from Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1120, 480],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1kv0ZJZOY-n8CX6Az3N8fkPXmpSZbl3i84f7MFMz3X7E",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Phase 1 - Research",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "campaign_id",
+              "lookupValue": "={{ $('Prepare Data').item.json.campaign_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-research",
+      "name": "Fetch Research from Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1120, 620],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll"
+      },
+      "id": "merge-fetched",
+      "name": "Merge Fetched Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1340, 540]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "final_blog",
+              "name": "final_blog",
+              "value": "={{ $('Fetch Content from Sheets').item.json.final_blog }}",
+              "type": "string"
+            },
+            {
+              "id": "brand_strategy",
+              "name": "brand_strategy",
+              "value": "={{ $('Fetch Research from Sheets').item.json.brand_strategy }}",
+              "type": "string"
+            },
+            {
+              "id": "keywords",
+              "name": "keywords",
+              "value": "={{ $('Fetch Research from Sheets').item.json.keywords }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "structure-fetched",
+      "name": "Structure Fetched Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1560, 540]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Prepare Data').item.json.final_blog || $json.final_blog }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a social media specialist. Create platform-specific content from the blog post.\n\n1. TIKTOK SCRIPT (60-90 seconds)\n   - Hook (first 3 seconds)\n   - Main content with timing markers\n   - Visual cues and on-screen text\n   - Call-to-action\n   - Trending sound suggestions\n   - 5-8 hashtags\n\n2. LINKEDIN POST (150-200 words)\n   - Professional opening\n   - Key insights\n   - Industry relevance\n   - Call-to-action with link\n   - 3-5 hashtags\n\n3. INSTAGRAM CAPTION\n   - Attention-grabbing opening\n   - Condensed message\n   - Strategic emoji use\n   - Strong CTA\n   - 5-8 hashtags (mix popular + niche)\n\n4. REDDIT POST (200-300 words)\n   - Community-focused tone\n   - Value-first approach\n   - Non-promotional style\n   - Suggested subreddit(s)\n   - Reddit etiquette compliant\n\nReturn as JSON:\n{\n  \"tiktok_script\": \"...\",\n  \"linkedin_post\": \"...\",\n  \"instagram_caption\": \"...\",\n  \"reddit_post\": \"...\"\n}"
+        }
+      },
+      "id": "agent-social",
+      "name": "Social Media Manager",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.0-flash-exp",
+        "options": {
+          "temperature": 0.9
+        }
+      },
+      "id": "gemini-social",
+      "name": "Gemini - Social",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [1780, 340],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Blog Post: {{ $('Prepare Data').item.json.final_blog || $json.final_blog }}\n\nKeywords: {{ $('Prepare Data').item.json.keywords || $json.keywords }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an SEO and AEO (Answer Engine Optimization) specialist.\n\nProvide comprehensive optimization for both traditional search and AI answer engines.\n\nSEO ELEMENTS:\n1. Meta title (60 characters max)\n2. Meta description (155 characters max)\n3. Image alt texts (3-5 suggestions)\n4. Internal linking strategy\n5. Schema markup recommendations\n\nAEO ELEMENTS:\n1. Featured snippet optimization\n   - Identify snippet opportunities\n   - Format content for position zero\n2. Question-based content structure\n   - FAQ schema suggestions\n   - People Also Ask targeting\n3. Conversational query optimization\n   - Natural language variations\n   - Voice search considerations\n4. AI Overview optimization\n   - Concise, authoritative answers\n   - Structured data for LLM consumption\n5. Entity optimization\n   - Key entities to emphasize\n   - Relationship mapping\n\nReturn as JSON:\n{\n  \"meta_title\": \"...\",\n  \"meta_description\": \"...\",\n  \"image_alt_texts\": [\"...\", \"...\", \"...\"],\n  \"internal_links\": \"...\",\n  \"schema_markup\": \"...\",\n  \"featured_snippet_opportunities\": \"...\",\n  \"faq_schema\": \"...\",\n  \"voice_search_variations\": \"...\",\n  \"ai_overview_summary\": \"...\",\n  \"key_entities\": \"...\"\n}"
+        }
+      },
+      "id": "agent-seo-aeo",
+      "name": "SEO & AEO Specialist",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [1780, 500]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.0-flash-exp",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "gemini-seo-aeo",
+      "name": "Gemini - SEO/AEO",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [1780, 640],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Brand Strategy: {{ $('Prepare Data').item.json.brand_strategy || $json.brand_strategy }}\n\nBlog Post: {{ $('Prepare Data').item.json.final_blog || $json.final_blog }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a brand design consultant. Create visual guidelines for the content.\n\n1. FEATURED IMAGE CONCEPT\n   - Detailed description for designers/AI generation\n   - Style, mood, elements to include\n   - Composition suggestions\n\n2. COLOR PALETTE\n   - 3-5 colors with hex codes\n   - Primary, secondary, accent\n   - Rationale for choices\n\n3. TYPOGRAPHY\n   - Heading font recommendation\n   - Body font recommendation\n   - Font pairing rationale\n   - Size/weight guidelines\n\n4. VISUAL STYLE\n   - Overall aesthetic (minimalist, bold, playful, etc.)\n   - Photography style\n   - Illustration style (if applicable)\n   - Iconography approach\n\n5. LOGO CONCEPT\n   - Concept description\n   - Key elements to include\n   - Style direction\n   - Usage guidelines\n\nReturn as JSON:\n{\n  \"featured_image_concept\": \"...\",\n  \"color_palette\": \"...\",\n  \"typography\": \"...\",\n  \"visual_style\": \"...\",\n  \"logo_concept\": \"...\"\n}"
+        }
+      },
+      "id": "agent-creative",
+      "name": "Creative Director",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [1780, 800]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.0-flash-exp",
+        "options": {
+          "temperature": 0.8
+        }
+      },
+      "id": "gemini-creative",
+      "name": "Gemini - Creative",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [1780, 940],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll"
+      },
+      "id": "merge-agents",
+      "name": "Merge Distribution",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [2060, 500]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "social_media_posts",
+              "name": "social_media_posts",
+              "value": "={{ $('Social Media Manager').item.json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "seo_metadata",
+              "name": "seo_metadata",
+              "value": "={{ $('SEO & AEO Specialist').item.json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "visual_guidelines",
+              "name": "visual_guidelines",
+              "value": "={{ $('Creative Director').item.json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "structure-output",
+      "name": "Structure Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2280, 500]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1kv0ZJZOY-n8CX6Az3N8fkPXmpSZbl3i84f7MFMz3X7E",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Phase 3 - Distribution",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "campaign_id": "={{ $('Prepare Data').item.json.campaign_id }}",
+            "timestamp": "={{ $('Prepare Data').item.json.timestamp }}",
+            "tiktok_script": "={{ $json.social_media_posts }}",
+            "linkedin_post": "={{ $json.social_media_posts }}",
+            "instagram_caption": "={{ $json.social_media_posts }}",
+            "reddit_post": "={{ $json.social_media_posts }}",
+            "meta_title": "={{ $json.seo_metadata }}",
+            "meta_description": "={{ $json.seo_metadata }}",
+            "image_alt_texts": "={{ $json.seo_metadata }}",
+            "internal_links": "={{ $json.seo_metadata }}",
+            "schema_markup": "={{ $json.seo_metadata }}",
+            "featured_image_concept": "={{ $json.visual_guidelines }}",
+            "color_palette": "={{ $json.visual_guidelines }}",
+            "typography": "={{ $json.visual_guidelines }}",
+            "visual_style": "={{ $json.visual_guidelines }}",
+            "logo_concept": "={{ $json.visual_guidelines }}",
+            "distribution_notes": ""
+          }
+        },
+        "options": {}
+      },
+      "id": "sheets-write",
+      "name": "Write to Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2500, 500],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "error-check",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-success",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2720, 500]
+    },
+    {
+      "parameters": {
+        "channel": "marketing-campaigns",
+        "text": "=:x: Distribution Team Failed\n\nCampaign ID: {{ $('Prepare Data').item.json.campaign_id }}\nError: {{ $json.error?.message ?? 'Unknown error' }}\nTimestamp: {{ $now.toISO() }}",
+        "otherOptions": {}
+      },
+      "id": "slack-error",
+      "name": "Slack Error",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [2940, 620],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Slack OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "response",
+              "name": "response",
+              "value": "=# Distribution Complete - Campaign #{{ $('Prepare Data').item.json.campaign_id }}\n\n## Social Media Posts\n{{ $('Structure Output').item.json.social_media_posts }}\n\n---\n\n## SEO & AEO Metadata\n{{ $('Structure Output').item.json.seo_metadata }}\n\n---\n\n## Visual Guidelines\n{{ $('Structure Output').item.json.visual_guidelines }}\n\n---\n\n*Data saved to Google Sheets*",
+              "type": "string"
+            },
+            {
+              "id": "campaign_id",
+              "name": "campaign_id",
+              "value": "={{ $('Prepare Data').item.json.campaign_id }}",
+              "type": "number"
+            },
+            {
+              "id": "social_media_posts",
+              "name": "social_media_posts",
+              "value": "={{ $('Structure Output').item.json.social_media_posts }}",
+              "type": "string"
+            },
+            {
+              "id": "seo_metadata",
+              "name": "seo_metadata",
+              "value": "={{ $('Structure Output').item.json.seo_metadata }}",
+              "type": "string"
+            },
+            {
+              "id": "visual_guidelines",
+              "name": "visual_guidelines",
+              "value": "={{ $('Structure Output').item.json.visual_guidelines }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2940, 380]
+    },
+    {
+      "parameters": {
+        "content": "## DISTRIBUTION TEAM\n\n3 Agents Running in Parallel:\n- Social Media Manager\n- SEO & AEO Specialist\n- Creative Director",
+        "height": 880,
+        "width": 440,
+        "color": 6
+      },
+      "id": "sticky-agents",
+      "name": "Agents Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1700, 120]
+    },
+    {
+      "parameters": {
+        "content": "## DATA FETCH\n\nIf no blog content provided,\nfetch from Sheets by campaign_id",
+        "height": 340,
+        "width": 280,
+        "color": 3
+      },
+      "id": "sticky-fetch",
+      "name": "Fetch Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1040, 380]
+    }
+  ],
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Merge Triggers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Merge Triggers",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Triggers": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Has Blog Content?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Blog Content?": {
+      "main": [
+        [
+          {
+            "node": "Social Media Manager",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SEO & AEO Specialist",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Creative Director",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Content from Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Research from Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Content from Sheets": {
+      "main": [
+        [
+          {
+            "node": "Merge Fetched Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Research from Sheets": {
+      "main": [
+        [
+          {
+            "node": "Merge Fetched Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Fetched Data": {
+      "main": [
+        [
+          {
+            "node": "Structure Fetched Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structure Fetched Data": {
+      "main": [
+        [
+          {
+            "node": "Social Media Manager",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SEO & AEO Specialist",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Creative Director",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Social Media Manager": {
+      "main": [
+        [
+          {
+            "node": "Merge Distribution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Social": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Social Media Manager",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO & AEO Specialist": {
+      "main": [
+        [
+          {
+            "node": "Merge Distribution",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Gemini - SEO/AEO": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SEO & AEO Specialist",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Creative Director": {
+      "main": [
+        [
+          {
+            "node": "Merge Distribution",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Gemini - Creative": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Creative Director",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Distribution": {
+      "main": [
+        [
+          {
+            "node": "Structure Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structure Output": {
+      "main": [
+        [
+          {
+            "node": "Write to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 2,
+  "versionId": "distribution-team-v1"
+}
